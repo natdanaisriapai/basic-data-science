@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 """
-FastAPI application exposing the trained housing price model as a REST API.
+แอป FastAPI สำหรับเปิดให้เรียกใช้งานโมเดลทำนายราคาบ้านผ่าน REST API
 
-This file lives at the project root so it can be started easily with:
+ไฟล์นี้อยู่ที่ root ของโปรเจกต์ เพื่อให้รันได้ง่ายด้วยคำสั่ง:
 
-    uvicorn main:app --host 127.0.0.1 --port 8000
+    uvicorn main:app --host 127.0.0.1 --port 8002
 
-The actual model loading / prediction logic is implemented in `src/model.py`.
+ส่วนที่โหลดโมเดลและฟังก์ชันทำนายจริง ๆ จะอยู่ใน `src/model.py`
 """
 
 import json
@@ -20,10 +20,10 @@ from pydantic import BaseModel, Field
 from src.model import DEFAULT_MODEL_INFO_PATH, build_default_service
 
 
-# Create the FastAPI application instance
+# สร้างอินสแตนซ์หลักของ FastAPI
 app = FastAPI(title="California Housing Model API", version="1.0.0")
 
-# Enable CORS so a separate frontend (different port/origin) can call the API
+# เปิดใช้ CORS เพื่อให้ frontend ที่อยู่คนละพอร์ต/โดเมนเรียก API นี้ได้
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,12 +35,12 @@ app.add_middleware(
 
 class PredictRequest(BaseModel):
     """
-    Request body for /predict.
+    โครงสร้างข้อมูลที่รับเข้ามาที่ /predict
 
-    All fields correspond to the features used by model2 in model_info.json.
+    ฟิลด์ทั้งหมดตรงกับชื่อฟีเจอร์ของ model2 ในไฟล์ model_info.json
     """
 
-    MedInc: float = Field(..., description="Median income in block group")
+    MedInc: float = Field(..., description="รายได้เฉลี่ยของครัวเรือน (MedInc)")
     HouseAge: float
     AveRooms: float
     AveBedrms: float
@@ -51,7 +51,7 @@ class PredictRequest(BaseModel):
 
 
 class PredictResponse(BaseModel):
-    """Response body for /predict."""
+    """โครงสร้างข้อมูลที่ตอบกลับจาก /predict"""
 
     prediction: float
     units: str = "target (California housing dataset units)"
@@ -59,24 +59,24 @@ class PredictResponse(BaseModel):
 
 
 def _load_model_info() -> Dict[str, Any]:
-    """Read metrics and feature list from model_info.json."""
+    """อ่านข้อมูลฟีเจอร์และ metric ของโมเดลจากไฟล์ model_info.json"""
     with DEFAULT_MODEL_INFO_PATH.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
-# Construct a ModelService instance once when the application starts
+# สร้างอินสแตนซ์ ModelService หนึ่งตัวตอนแอปเริ่มทำงาน (ใช้ซ้ำทุกคำขอ)
 service = build_default_service()
 
 
 @app.get("/health")
 def health() -> Dict[str, str]:
-    """Simple health-check endpoint for monitoring."""
+    """เอ็นด์พอยต์สำหรับตรวจว่าเซิร์ฟเวอร์ยังทำงานปกติหรือไม่"""
     return {"status": "ok"}
 
 
 @app.get("/metadata")
 def metadata() -> Dict[str, Any]:
-    """Return basic metadata about the loaded model (features + metrics)."""
+    """คืนค่า metadata พื้นฐานของโมเดล (ฟีเจอร์ + metric)"""
     info = _load_model_info()
     return {
         "model": "model2_linear_regression.pkl",
@@ -91,21 +91,21 @@ def metadata() -> Dict[str, Any]:
 @app.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest, debug: Optional[bool] = False) -> PredictResponse:
     """
-    Predict house price from the provided features.
+    ทำนายราคาบ้านจากฟีเจอร์ที่ส่งมาในคำขอ
 
-    Set `debug=true` in query params during development to surface the
-    underlying Python error instead of a generic HTTP 400.
+    ระหว่างพัฒนา สามารถส่ง query param `debug=true`
+    เพื่อให้เห็น error จริง ๆ ของ Python แทนการตอบกลับเป็น HTTP 400 เฉย ๆ
     """
     try:
-        # Convert Pydantic model into a plain dict
+        # แปลงออบเจ็กต์ Pydantic ให้กลายเป็น dict แบบปกติ
         payload = req.model_dump()
-        # Delegate actual prediction to the ModelService
+        # ส่งต่อให้ ModelService เป็นคนเรียก predict จริง ๆ
         pred = service.predict_one(payload)
         return PredictResponse(prediction=pred, features_used=payload)
     except Exception as e:
         if debug:
-            # In debug mode, re-raise to see full stack trace in logs
+            # ถ้าอยู่ในโหมด debug ให้โยน exception เดิมทิ้งไปเลยเพื่อดู stack trace เต็ม ๆ
             raise
-        # For normal clients, return a clean 400 error
+        # ถ้าเป็นการใช้งานปกติ ให้ตอบกลับเป็น HTTP 400 พร้อมข้อความ error แบบอ่านเข้าใจง่าย
         raise HTTPException(status_code=400, detail=str(e))
 

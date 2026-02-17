@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 """
-Core model utilities for the California housing project.
+ยูทิลิตี้หลักของโมเดลสำหรับโปรเจกต์ California housing
 
-Responsibilities of this module:
-- Resolve the correct path to the saved sklearn model (.pkl) and model_info.json
-- Load the model from disk
-- Provide a small `ModelService` class with a convenient `predict_one()` method
+หน้าที่ของโมดูลนี้:
+- หา path ที่ถูกต้องของไฟล์โมเดล sklearn (.pkl) และไฟล์ model_info.json
+- โหลดโมเดลจากดิสก์
+- ให้คลาส `ModelService` ที่มีเมธอด `predict_one()` สำหรับทำนายสะดวก ๆ
 """
 
 import json
@@ -18,25 +18,25 @@ import joblib
 import pandas as pd
 
 
-# Project root = one level above `src/`
+# โฟลเดอร์ root ของโปรเจกต์ = โฟลเดอร์ที่อยู่เหนือ `src/` ขึ้นไป 1 ชั้น
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-# Primary locations under the tracked `models/` directory
+# ตำแหน่งหลักของไฟล์โมเดลภายใต้โฟลเดอร์ `models/` (ที่อยู่ใต้ git)
 DEFAULT_MODEL_PATH = PROJECT_ROOT / "models" / "model2_linear_regression.pkl"
 DEFAULT_MODEL_INFO_PATH = PROJECT_ROOT / "models" / "model_info.json"
 
-# Alternative locations under notebooks (in case you re-run and save from Jupyter)
+# ตำแหน่งสำรองใต้โฟลเดอร์ notebooks (กรณีรันเซฟใหม่จาก Jupyter)
 ALT_MODEL_PATH = PROJECT_ROOT / "notebooks" / "models" / "model2_linear_regression.pkl"
 ALT_MODEL_INFO_PATH = PROJECT_ROOT / "notebooks" / "models" / "model_info.json"
 
 
 def resolve_existing_path(*candidates: Path) -> Path:
     """
-    Return the first existing path from the list of candidates.
+    คืน path ตัวแรกที่มีอยู่จริงจากลิสต์ของ candidates
 
-    This allows the service to work whether the model was saved under
-    `models/` or `notebooks/models/`. If none exist, the first candidate
-    is returned so the caller still gets a clear FileNotFoundError.
+    ทำให้ service ใช้งานได้ทั้งกรณีที่โมเดลถูกเซฟใต้ `models/`
+    หรือใต้ `notebooks/models/` ถ้าไม่เจอเลยสักไฟล์
+    จะคืนตัวแรกเพื่อให้ผู้ใช้เจอ FileNotFoundError ที่ชัดเจน
     """
     for p in candidates:
         if p.exists():
@@ -45,27 +45,27 @@ def resolve_existing_path(*candidates: Path) -> Path:
 
 
 def load_model_info(path: Path = DEFAULT_MODEL_INFO_PATH) -> Dict[str, Any]:
-    """Load model metadata (features and metrics) from a JSON file."""
+    """โหลด metadata ของโมเดล (ฟีเจอร์ + metric) จากไฟล์ JSON"""
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def load_model(path: Path = DEFAULT_MODEL_PATH) -> Any:
-    """Load a sklearn model object that was serialized with joblib."""
+    """โหลดออบเจกต์โมเดล sklearn ที่ถูกเซฟด้วย joblib"""
     return joblib.load(path)
 
 
 @dataclass(frozen=True)
 class ModelService:
     """
-    Thin wrapper around the sklearn model to standardize input / output.
+    คลาสห่อ (wrapper) บาง ๆ รอบโมเดล sklearn เพื่อให้รูปแบบ input/output ชัดเจน
 
     Attributes
     ----------
     model:
-        The loaded sklearn model (LinearRegression in this project).
+        โมเดล sklearn ที่โหลดมาแล้ว (ในโปรเจกต์นี้คือ LinearRegression)
     features:
-        Ordered list of feature names expected by the model.
+        ลิสต์ชื่อฟีเจอร์ (ตามลำดับ) ที่โมเดลคาดหวัง
     """
 
     model: Any
@@ -73,26 +73,26 @@ class ModelService:
 
     def predict_one(self, payload: Dict[str, float]) -> float:
         """
-        Run prediction for a single record represented as a dict.
+        ทำนาย 1 แถวข้อมูล ที่ส่งมาในรูป dict
 
         Parameters
         ----------
         payload:
-            Mapping from feature name to numeric value. All required features
-            in `self.features` must be present.
+            mapping จากชื่อฟีเจอร์ → ค่าเชิงตัวเลข
+            จะต้องมีทุกฟีเจอร์ตามที่ระบุใน self.features
         """
-        # Check that all required features are provided
+        # ตรวจว่ามีฟีเจอร์ที่จำเป็นครบทุกตัวหรือไม่
         missing = [f for f in self.features if f not in payload]
         if missing:
             raise ValueError(f"Missing features: {missing}")
 
-        # Keep only known features and coerce values to float
+        # เก็บเฉพาะฟีเจอร์ที่รู้จัก และบังคับให้เป็น float
         row = {f: float(payload[f]) for f in self.features}
 
-        # Build a single-row DataFrame with the correct column order
+        # สร้าง DataFrame 1 แถว พร้อมเรียงคอลัมน์ให้ตรงตามลำดับฟีเจอร์
         X = pd.DataFrame([row], columns=self.features)
 
-        # Call the underlying sklearn model and unwrap the scalar result
+        # เรียกโมเดล sklearn จริง ๆ และแปลงผลลัพธ์ให้เป็น float ธรรมดา
         y_pred = self.model.predict(X)
         return float(y_pred[0])
 
@@ -102,14 +102,14 @@ def build_default_service(
     model_info_path: Path = resolve_existing_path(DEFAULT_MODEL_INFO_PATH, ALT_MODEL_INFO_PATH),
 ) -> ModelService:
     """
-    Factory that constructs a ModelService using the project's default files.
+    ฟังก์ชัน factory สำหรับสร้าง ModelService จากไฟล์ดีฟอลต์ของโปรเจกต์
 
-    It reads `model_info.json` to determine which features belong to model2,
-    then loads the corresponding .pkl model from disk.
+    อ่านไฟล์ `model_info.json` เพื่อดูว่าฟีเจอร์ไหนเป็นของ model2
+    แล้วค่อยโหลดไฟล์ .pkl ของ model2 จากดิสก์
     """
     info = load_model_info(model_info_path)
 
-    # We specifically use the feature list for "model2"
+    # ตรงนี้เราใช้ลิสต์ฟีเจอร์ของ "model2" โดยเฉพาะ
     features = info.get("model2_features")
     if not isinstance(features, list) or not all(isinstance(x, str) for x in features):
         raise ValueError("model_info.json missing valid 'model2_features' list")
