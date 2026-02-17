@@ -40,8 +40,18 @@ California Housing Dataset (20,640 records)
 ├── data/
 │   └── raw/
 │       └── house_california.xlsx    # ข้อมูลดิบ California Housing Dataset
+├── models/
+│   ├── model1_linear_regression.pkl # โมเดล Linear Regression ตัวที่ 1
+│   ├── model2_linear_regression.pkl # โมเดล Linear Regression ตัวที่ 2 (ใช้ใน API)
+│   └── model_info.json              # รายชื่อฟีเจอร์ + metric ของแต่ละโมเดล
 ├── notebooks/
 │   └── main.ipynb                   # Notebook หลักสำหรับ EDA และ Modeling
+├── src/
+│   ├── __init__.py
+│   └── model.py                     # ฟังก์ชันโหลดโมเดล + ModelService.predict_one()
+├── frontend/
+│   └── index.html                   # หน้าเว็บเรียบง่าย เรียกใช้ FastAPI backend
+├── main.py                          # FastAPI backend entrypoint (uvicorn main:app ...)
 ├── requirements.txt                 # Dependencies ที่จำเป็น
 └── README.md
 ```
@@ -92,3 +102,44 @@ pip install -r requirements.txt
 - openpyxl == 3.1.5
 - matplotlib == 3.10.8
 - seaborn == 0.13.2
+
+---
+
+## 🌐 Model API (FastAPI) + Frontend
+
+โปรเจกต์นี้มี API สำหรับเรียกใช้งานโมเดล `model2_linear_regression.pkl` และมีหน้าเว็บเรียบง่ายสำหรับกรอกค่า feature แล้วทำนายผลลัพธ์  
+โดยแยก **backend** และ **frontend** ออกจากกัน ช่วยให้เปิดคนละ terminal เพื่อพัฒนา/ดีบั๊กได้สะดวก
+
+### Install
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run Backend (FastAPI)
+
+รันจากโฟลเดอร์ root ของโปรเจกต์:
+
+```bash
+uvicorn main:app --host 127.0.0.1 --port 8002
+```
+
+### Run Frontend (แยก terminal)
+
+รันจากอีก terminal:
+
+```bash
+cd frontend
+python -m http.server 5500
+```
+
+แล้วเปิดเบราว์เซอร์ที่:
+
+- `http://127.0.0.1:5500/`  (หน้าเว็บ)
+- หน้าเว็บจะเรียก API ที่ `http://127.0.0.1:8002` (กำหนดใน `frontend/index.html`)
+
+### API Endpoints
+
+- `GET /health`
+- `GET /metadata`
+- `POST /predict`

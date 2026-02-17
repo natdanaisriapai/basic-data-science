@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>California Housing Prediction</title>
+    <!--
+      Simple standalone frontend for the FastAPI backend.
+      Backend is expected to run on http://127.0.0.1:8002 (see main.py).
+    -->
+    <style>
+      :root { color-scheme: light; }
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Thai", sans-serif;
+        margin: 0;
+        background: #0b1220;
+        color: #e6edf7;
+      }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; }
+      .card {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      }
+      h1 { font-size: 22px; margin: 0 0 8px; }
+      p { margin: 0 0 16px; color: rgba(230,237,247,0.85); }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      label {
+        display: block;
+        font-size: 12px;
+        color: rgba(230,237,247,0.75);
+        margin-bottom: 6px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.16);
+        background: rgba(0,0,0,0.22);
+        color: #e6edf7;
+        outline: none;
+      }
+      input:focus {
+        border-color: rgba(99, 179, 237, 0.9);
+        box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.2);
+      }
+      .row { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
+      button {
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(99, 179, 237, 0.2);
+        color: #e6edf7;
+        cursor: pointer;
+      }
+      button:hover { background: rgba(99, 179, 237, 0.28); }
+      .muted { font-size: 12px; color: rgba(230,237,247,0.7); }
+      .out {
+        margin-top: 16px;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(0,0,0,0.22);
+        border: 1px dashed rgba(255,255,255,0.18);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+      @media (max-width: 720px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>🏠 California Housing Prediction (Model 2)</h1>
+        <p>กรอกค่า feature แล้วกด Predict เพื่อเรียกใช้งานโมเดลผ่าน FastAPI</p>
+
+        <form id="form">
+          <div class="grid">
+            <div>
+              <label for="MedInc">MedInc</label>
+              <input id="MedInc" name="MedInc" type="number" step="any" value="8.3252" required />
+            </div>
+            <div>
+              <label for="HouseAge">HouseAge</label>
+              <input id="HouseAge" name="HouseAge" type="number" step="any" value="41" required />
+            </div>
+            <div>
+              <label for="AveRooms">AveRooms</label>
+              <input id="AveRooms" name="AveRooms" type="number" step="any" value="6.984127" required />
+            </div>
+            <div>
+              <label for="AveBedrms">AveBedrms</label>
+              <input id="AveBedrms" name="AveBedrms" type="number" step="any" value="1.02381" required />
+            </div>
+            <div>
+              <label for="Population">Population</label>
+              <input id="Population" name="Population" type="number" step="any" value="322" required />
+            </div>
+            <div>
+              <label for="AveOccup">AveOccup</label>
+              <input id="AveOccup" name="AveOccup" type="number" step="any" value="2.555556" required />
+            </div>
+            <div>
+              <label for="Latitude">Latitude</label>
+              <input id="Latitude" name="Latitude" type="number" step="any" value="37.88" required />
+            </div>
+            <div>
+              <label for="Longitude">Longitude</label>
+              <input id="Longitude" name="Longitude" type="number" step="any" value="-122.23" required />
+            </div>
+          </div>
+
+          <div class="row">
+            <button type="submit">Predict</button>
+            <button type="button" id="btnMeta">Load metadata</button>
+            <span class="muted">Backend API: <code id="apiBase"></code></span>
+          </div>
+        </form>
+
+        <div class="out" id="output">
+          <div class="muted">ผลลัพธ์จะขึ้นที่นี่</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Base URL ของ FastAPI backend (แก้ได้ตาม port/host ที่คุณรัน)
+      const apiBase = "http://127.0.0.1:8002";
+      document.getElementById("apiBase").textContent = apiBase;
+
+      const output = document.getElementById("output");
+      const setOut = (html) => {
+        output.innerHTML = html;
+      };
+
+      // ดึง metadata ของโมเดล (features + metrics)
+      document.getElementById("btnMeta").addEventListener("click", async () => {
+        setOut('<div class="muted">Loading metadata...</div>');
+        const res = await fetch(`${apiBase}/metadata`);
+        const data = await res.json();
+        setOut(`
+          <div><b>Features</b>: <code>${data.features.join(", ")}</code></div>
+          <div><b>Metrics</b>: r2=<code>${data.metrics.r2}</code>, rmse=<code>${data.metrics.rmse}</code></div>
+        `);
+      });
+
+      // ส่งข้อมูลไปให้ /predict
+      document.getElementById("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        setOut('<div class="muted">Predicting...</div>');
+
+        const form = e.target;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        for (const k of Object.keys(payload)) payload[k] = Number(payload[k]);
+
+        const res = await fetch(`${apiBase}/predict`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setOut(`<div><b>Error</b>: <code>${JSON.stringify(data)}</code></div>`);
+          return;
+        }
+
+        setOut(`
+          <div><b>Prediction</b>: <code>${data.prediction}</code></div>
+          <div class="muted">เรียก /predict สำเร็จ และได้ผลลัพธ์กลับมาแล้ว</div>
+        `);
+      });
+    </script>
+  </body>
+</html>
+

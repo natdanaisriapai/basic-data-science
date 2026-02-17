@@ -1,0 +1,19 @@
+{
+  "model1_features": [
+    "MedInc"
+  ],
+  "model2_features": [
+    "MedInc",
+    "HouseAge",
+    "AveRooms",
+    "AveBedrms",
+    "Population",
+    "AveOccup",
+    "Latitude",
+    "Longitude"
+  ],
+  "model1_r2": 0.45885918903846656,
+  "model1_rmse": 0.8420901241414454,
+  "model2_r2": 0.575787706032451,
+  "model2_rmse": 0.7455813830127763
+}
