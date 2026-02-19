@@ -1,0 +1,14 @@
+venv
+__pycache__
+*.pyc
+.git
+.gitignore
+*.ipynb_checkpoints
+
+# ข้อมูลดิบ (ถ้าไม่จำเป็นต้องใช้ใน container)
+data/raw/
+
+# ไฟล์/โฟลเดอร์ชั่วคราวจาก IDE
+.vscode
+.idea
+

@@ -50,9 +50,13 @@ California Housing Dataset (20,640 records)
 │   ├── __init__.py
 │   └── model.py                     # ฟังก์ชันโหลดโมเดล + ModelService.predict_one()
 ├── frontend/
-│   └── index.html                   # หน้าเว็บเรียบง่าย เรียกใช้ FastAPI backend
+│   ├── index.html                   # หน้าเว็บเรียบง่าย เรียกใช้ FastAPI backend
+│   └── Dockerfile                   # Dockerfile สำหรับ frontend (static server)
 ├── main.py                          # FastAPI backend entrypoint (uvicorn main:app ...)
 ├── requirements.txt                 # Dependencies ที่จำเป็น
+├── Dockerfile                       # Dockerfile สำหรับ backend (FastAPI + model)
+├── docker-compose.yml               # Compose สำหรับรัน backend + frontend พร้อมกัน
+├── .dockerignore                    # รายการไฟล์/โฟลเดอร์ที่ไม่ต้องการใส่ใน Docker image
 └── README.md
 ```
 
@@ -81,7 +85,7 @@ venv\Scripts\activate  # สำหรับ Windows
 pip install -r requirements.txt
 ```
 
-### Usage
+### Usage (รันแบบปกติบนเครื่อง)
 
 เปิดไฟล์ `notebooks/main.ipynb` ใน Jupyter Notebook หรือ JupyterLab เพื่อเริ่มการวิเคราะห์
 
@@ -98,10 +102,52 @@ pip install -r requirements.txt
 
 ## 📦 Dependencies
 
-- pandas == 2.3.3
-- openpyxl == 3.1.5
-- matplotlib == 3.10.8
-- seaborn == 0.13.2
+- pandas == 2.3.3  
+- openpyxl == 3.1.5  
+- matplotlib == 3.10.8  
+- seaborn == 0.13.2  
+- numpy == 2.4.1  
+- scikit-learn == 1.8.0  
+- joblib == 1.5.3  
+- fastapi == 0.129.0  
+- uvicorn == 0.41.0
+
+---
+
+## 🐳 Running with Docker / Docker Compose
+
+หากไม่ต้องการจัดการ Python environment เอง สามารถใช้ Docker ได้ทันทีจาก root โปรเจกต์
+
+### Build & Run ด้วย Docker Compose (แนะนำ)
+
+```bash
+docker-compose up --build
+```
+
+Compose จะรัน:
+- **backend**: `california-backend` (FastAPI บนพอร์ต `8002`)
+- **frontend**: `california-frontend` (static HTML บนพอร์ต `5500`)
+
+เมื่อรันเสร็จแล้ว:
+- เปิดหน้าเว็บที่ `http://127.0.0.1:5500/`
+- Backend API:
+  - `http://127.0.0.1:8002/health`
+  - `http://127.0.0.1:8002/metadata`
+  - `http://127.0.0.1:8002/predict`
+
+หยุด container ทั้งหมด:
+
+```bash
+docker-compose down
+```
+
+### ภาพรวม Dockerfile แต่ละส่วน
+
+- `Dockerfile` (root): สร้าง image สำหรับ **backend (FastAPI)**  
+  - ติดตั้ง dependencies จาก `requirements.txt`  
+  - รัน `uvicorn main:app --host 0.0.0.0 --port 8002`
+- `frontend/Dockerfile`: สร้าง image สำหรับ **frontend (static server)**  
+  - ใช้ `python -m http.server 5500 --bind 0.0.0.0` เพื่อเสิร์ฟไฟล์ในโฟลเดอร์ `frontend/`
 
 ---
 
